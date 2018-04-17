@@ -1,0 +1,23 @@
+{
+  "name": "service",
+  "version": "1.0.0",
+  "main": "serveurWeb.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node serveurWeb.js"
+  },
+  "author": "safa",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "cors": "^2.8.4",
+    "express": "^4.16.3",
+    "express-myconnection": "^1.0.4",
+    "ibmiotf": "^0.2.41",
+    "mongodb": "^3.0.6",
+    "mqtt": "^2.17.0",
+    "mysql": "^2.15.0",
+    "nodemon": "^1.17.2"
+  }
+}
