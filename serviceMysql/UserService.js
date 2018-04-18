@@ -8,7 +8,9 @@ var port = process.env.por || 3000;
 var router = express.Router();
 var User = require("../model/User");
 var cors = require('cors');
-
+var jwt = require('jsonwebtoken');
+var passwordHash = require('password-hash');
+var bcrypt = require('bcryptjs');
 function UserService(){
 
 app.use(cors({
@@ -26,23 +28,25 @@ app.use(cors({
         });
     });
 // post get email password
-app.use("/api/authentification",function (req, res, next) {
+/*app.use("/api/authentification",function (req, res, next) {
    
    email=req.body.email;
-   password=req.body.password;
-    
-    let sql="SELECT count(id_user),role FROM users WHERE email ='" + email + "' and password ='"+ password +"'";
+   password=passwordHash.isHashed(req.body.password);
+    console.log(password);
+    let sql="SELECT password,role FROM users WHERE email ='" + email + "' and password ='"+ password +"'";
     mysqlcnx.query(sql,function (err,result, fields) {
         if (err) 
         console.log(err.message);
+        var token=jwt.sign({email},'key',{ expiresIn: '1h' });
+       //console.log(token);
         res.send(JSON.stringify({
             "status": 200,
             "error": null,
-            "response": result
+            "response": result,token
         }));
        
        });
-    });
+    });*/
 // post 
 
     app.use("/api/Adduser",function (req, res, next)
@@ -72,14 +76,14 @@ app.use("/api/authentification",function (req, res, next) {
             nom = req.body.nom,
             prenom =req.body.prenom,
             email =req.body.email,
-            password=req.body.password,
+            password=passwordHash.generate(req.body.password),
+           // password=bcrypt.hash(req.body.password),
             numTel=req.body.numTel,
             adresse=req.body.adresse,
             dateAjout=req.body.dateAjout,
             role=req.body.role                    
             ]  
 
-        
         //let sql='INSERT INTO users (nom,prenom,email,password,numTel,adresse,dateAjout,role) VALUES (?)';
         mysqlcnx.query('INSERT INTO users (nom,prenom,email,password,numTel,adresse,dateAjout,role) VALUES (?)',[user],function(error,result) {
             if (error) {
@@ -150,6 +154,56 @@ app.listen(port, function () {
     next();
   });*/
   
+   // post get email password
+app.use("/api/authentification",function (req, res, next) {
+   
+   email=req.body.email;
+   password=req.body.password;
+    console.log(email);
+    let sql="SELECT count(id_user),password,role FROM users WHERE email ='" + email + "'";
+    mysqlcnx.query(sql,function (err,result, fields) {
+        
+        console.log(result[0]['password']);
+        console.log(result[0]['password'] && passwordHash.verify(password, result[0]['password']));
+        if(result[0]['password'] && passwordHash.verify(password, result[0]['password'])) 
+
+        {
+            var token=jwt.sign({email},'key',{ expiresIn: '1h' });
+            console.log(token);
+            res.send(JSON.stringify({
+                "status": 200,
+                "error": null,
+                "response": true,result,token 
+            }));  
+        }
+        
+      else
+      {
+        res.send(JSON.stringify({
+            "status": 200,
+            "error": null,
+            "response": false,
+        }));
+        
+    
+
+       
+      }
+    
+    });
+    });
+
+
+
+
+
+
+
+
+
+
+
+
   
 }
 module.exports = UserService;
