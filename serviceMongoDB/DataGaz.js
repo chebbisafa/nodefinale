@@ -5,7 +5,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 var MongoClient = require('mongodb').MongoClient;
 var Gaz = require("../model/GAZ");
-var dbmongo;
+
+//var get=require("../ibm");
+ //console.log(get.objet);
 /* create database
 var url = "mongodb://localhost:27017/Gaz";
 MongoClient.connect(url, function(err, db) {
@@ -24,7 +26,7 @@ MongoClient.connect(url, function(err, db) {
     });
   });
   */
- 
+ //function DataGaz(){
 //connexion
  MongoClient.connect('mongodb://localhost:27017/Gaz', (err, Gaz) => {
    if (err) return console.log(err);
@@ -56,21 +58,57 @@ app.use("/listgazuser/:iddevice",function (req, res, next) {
   });
 });
 
-//post 
-  app.post('/addinfo', function(req, res)  {
-      var  gaz =  {
+// get with date
+
+app.use("/listgazdate",function (req, res, next) {
+
+  var dateselect= req.body.dateselect; 
+  console.log(dateselect);
+  var query = { date: dateselect };
+  dbmongo.collection('info').find(query).toArray((err, result) => {
+    if (err) return console.log(err);
+    console.log(result);
+    res.json(result);
+  });
+});
+// get between two date
+
+app.use("/listgazdateinterval",function (req, res, next) {
+
+  var datemin= req.body.datemin; 
+  var datemax= req.body.datemax; 
+  console.log(datemin);
+  console.log(datemax);
+  var query = { date: { "$gte":datemin,"$lte":datemax }};
+  dbmongo.collection('info').find({ "date": { "$gte":datemin,"$lte":datemax }}).toArray((err, result) => {
+    if (err) return console.log(err);
+    console.log(result);
+    res.json(result);
+  });
+});
+
+
+//post cd 
+module.exports = {
+addinfo: function(gaz)
+{
+app.post('/addinfo', function(req, res)  {
+    /*  var  gaz =  {
         TauxGaz :req.body.TauxGaz,
         date : req.body.date,
         deviceID :req.body.deviceID,
         
-      }
+      }*/
+      
     dbmongo.collection('info').save(gaz, (err, result) => {
       if (err) return console.log(err);
       console.log('saved to database');
-      res.redirect('/listgaz');
+     // res.redirect('/listgaz');
     });
-  });
-  
+  })
+}
+}
+
 //delete rows
 app.delete('/delinfogaz/:iddevice', (req, res) => {
   var iddevice = req.params.iddevice; 
@@ -81,3 +119,4 @@ app.delete('/delinfogaz/:iddevice', (req, res) => {
     res.redirect('/listgaz');
   })
 })
+// } module.exports = DataGaz;

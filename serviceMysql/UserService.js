@@ -8,6 +8,9 @@ var port = process.env.por || 3000;
 var router = express.Router();
 var User = require("../model/User");
 var cors = require('cors');
+var jwt = require('jsonwebtoken');
+var passwordHash = require('password-hash');
+var DUser = require("./DeviceUser"); 
 
 function UserService(){
 
@@ -25,54 +28,44 @@ app.use(cors({
             }));
         });
     });
-// post get email password
-app.use("/api/authentification",function (req, res, next) {
-   
-   email=req.body.email;
-   password=req.body.password;
-    
-    let sql="SELECT count(id_user),role FROM users WHERE email ='" + email + "' and password ='"+ password +"'";
-    mysqlcnx.query(sql,function (err,result, fields) {
-        if (err) 
-        console.log(err.message);
-        res.send(JSON.stringify({
-            "status": 200,
-            "error": null,
-            "response": result
-        }));
-       
-       });
+    // get id user with email 
+    function getid(email)
+    {
+    app.post("/api/idusers",function (req, res, next) {
+        email=req.body.email;
+        mysqlcnx.query("SELECT id_user FROM users where email='"+email+"'" , function (err, result, fields) {
+            if (err) throw err;
+            res.send(JSON.stringify(result));
+        
     });
+});
+}
+
+ // get nom prenom  user with id
+ function getid(email)
+ {
+ app.post("/api/npusers",function (req, res, next) {
+     email=req.body.id_user;
+     mysqlcnx.query("SELECT nom,prenom FROM users where id_user='"+id_user+"'" , function (err, result, fields) {
+         if (err) throw err;
+         res.send(JSON.stringify(result));
+     
+ });
+});
+}
+
 // post 
 
     app.use("/api/Adduser",function (req, res, next)
        
        {
-        
-                      /* var  user = new User
-                                (
-                            
-                                nom = req.body.nom,
-                                prenom =req.body.prenom,
-                                email =req.body.email,
-                                password=req.body.password,
-                                numTel=req.body.numTel,
-                                adresse=req.body.adresse,
-                                dateAjout=req.body.dateAjout,
-                                role=req.body.role
-                                
-                                )*/
-                                var postData = req.body; // post data is a json
-
-                                // also tried passing JSON.stringify(postData) instead of postData below
-                              
-        //console.log([values]);
 
         var  user = [
             nom = req.body.nom,
             prenom =req.body.prenom,
             email =req.body.email,
-            password=req.body.password,
+           // password=req.body.password,
+            password=passwordHash.generate(req.body.password),
             numTel=req.body.numTel,
             adresse=req.body.adresse,
             dateAjout=req.body.dateAjout,
@@ -83,11 +76,19 @@ app.use("/api/authentification",function (req, res, next) {
         //let sql='INSERT INTO users (nom,prenom,email,password,numTel,adresse,dateAjout,role) VALUES (?)';
         mysqlcnx.query('INSERT INTO users (nom,prenom,email,password,numTel,adresse,dateAjout,role) VALUES (?)',[user],function(error,result) {
             if (error) {
-                console.log("error insert");
-                console.log(error.message);
+                res.send(JSON.stringify({
+                    "status": 200,
+                    "error": null,
+                    "response": false,
+                })); 
             } else {
             console.log('success');    
             console.log("Number of records inserted: " +result.affectedRows);
+            res.send(JSON.stringify({
+                "status": 200,
+                "error": null,
+                "response": true,
+            })); 
             }
         });
     });
@@ -112,16 +113,16 @@ app.use("/api/authentification",function (req, res, next) {
             
             var id=req.body.id_user;
             var email=req.body.email;
-            var pwd=req.body.password;
+           // var pwd=req.body.password;
             var numTel=req.body.numTel;        
             var adresse=req.body.adresse;   
             console.log (email);
-            console.log (pwd);
+           // console.log (pwd);
             console.log (numTel);
             console.log (adresse);
             console.log (id);
-        let sql = 'UPDATE users  SET email = ? ,password = ? ,numTel = ?,adresse = ? WHERE id_user = ?';
-            mysqlcnx.query(sql,[email,pwd,numTel,adresse,id],(error, results, fields) => {
+        let sql = 'UPDATE users  SET email = ? ,numTel = ?,adresse = ? WHERE id_user = ?';
+            mysqlcnx.query(sql,[email,numTel,adresse,id],(error, results, fields) => {
                 if (error) 
                 {
                 console.error(error.message);
@@ -132,6 +133,60 @@ app.use("/api/authentification",function (req, res, next) {
         });
     });
             
+// post get email  authentification
+    app.use("/api/authentification",function (req, res, next) {
+           
+           email=req.body.email;
+           password=req.body.password;
+            let sql1="SELECT count(id_user),id_user,password,role,nom,prenom FROM users WHERE email ='" + email + "'";
+            mysqlcnx.query(sql1,function (err,result, fields) {
+
+            let sql2="SELECT device_id,organisation_id,device_type FROM detecteur_gaz where id_user ="+ result[0]['id_user'];
+            mysqlcnx.query(sql2,function (err2,results, fields) {
+              
+            
+                if(result[0]['password'] && passwordHash.verify(password, result[0]['password'])) 
+        
+                {
+                   var token=jwt.sign({email},'key',{ expiresIn: '1h' });
+                   // console.log(token);
+                    res.send(JSON.stringify({
+                        "status": 200,
+                        "error": null, 
+                        "response": true,result,token,results
+                    }));  
+                }
+                
+              else
+              {
+                res.send(JSON.stringify({
+                    "status": 200,
+                    "error": null,
+                    "response": false,
+                }));
+                
+            
+        
+               
+              }
+            });
+            });
+            });
+
+
+//get nb totale user
+app.use("/api/NbUsersTotale",function (req, res, next) {
+    let sql="SELECT count(*) as  nb FROM users";
+    mysqlcnx.query(sql,function (err, result, fields) {
+        if (err) 
+        console.log("erreur get")
+        res.send(JSON.stringify({
+            "status": 200,
+            "error": null,
+            "response": result
+        }));
+    });
+    });
 
 
 
@@ -139,17 +194,10 @@ app.use("/api/authentification",function (req, res, next) {
 
 
 
-
-app.listen(port, function () {
+    app.listen(port,function () {
     console.log("Express server running on port %d", port);
 });
 
-/*app.all('/*', function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "X-Requested-With");
-    next();
-  });*/
-  
   
 }
 module.exports = UserService;
